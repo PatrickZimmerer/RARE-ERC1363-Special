@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.17;
 
 // QUESTION: Jeffrey said he's not a big fan of Ownable from Openzeppelin because you can fuck up things
 //           should we rather use i_deployer = msg.sender in constructor and then just put the require(i_deployer)
@@ -9,8 +9,9 @@ pragma solidity ^0.8.17;
 
 import {ERC20Capped, ERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import {Ownable} from "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
+import {IERC1363} from "../node_modules/erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 
-contract ERC1363Capped is ERC20Capped {
+contract ERC1363Capped is ERC20Capped, IERC1363, ERC165 {
     uint8 public constant DECIMALS = 18;
     uint256 public constant MAX_SUPPLY = 100_000_000 * 1e18;
 
