@@ -1,22 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
+import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "../node_modules/erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 
-// QUESTION: Jeffrey said he's not a big fan of Ownable from Openzeppelin because you can fuck up things
-//           should we rather use i_deployer = msg.sender in constructor and then just put the require(i_deployer)
-//           in a new modifier, what's best practice?
-// QUESTION: When to use lower uints like uin8? Jeffrey said in a video that lower uints get streamed to uint256
-//           when reading from storage => user has to pay more gas, so what usecases are there for lower uints?
+contract ERC1636Capped is ERC1363, ERC20Capped {
+    address immutable i_owner;
+    uint256 public constant MAX_SUPPLY = 10_000_000 * 10 ** 18;
 
-import {ERC20Capped, ERC20} from "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
-import {Ownable} from "../node_modules/@openzeppelin/contracts/access/Ownable.sol";
-import {IERC1363} from "../node_modules/erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
+    constructor() ERC20("EasyCoin", "ESC") ERC20Capped(MAX_SUPPLY) {
+        i_owner = msg.sender;
+        _mint(msg.sender, 1_000_000 * 10 ** uint256(decimals()));
+    }
 
-contract ERC1363Capped is ERC20Capped, IERC1363, ERC165 {
-    uint8 public constant DECIMALS = 18;
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 1e18;
+    function adminWithdraw() external {
+        require(i_owner == msg.sender, "not the owner");
+        payable(msg.sender).transfer(address(this).balance);
+    }
 
-    constructor(
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol) ERC20Capped(MAX_SUPPLY) {}
+    function _mint(
+        address account,
+        uint256 amount
+    ) internal virtual override(ERC20, ERC20Capped) {
+        super._mint(account, amount);
+    }
 }
