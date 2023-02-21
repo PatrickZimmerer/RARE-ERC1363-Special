@@ -4,6 +4,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 
+// QUESTION: I need to override the _mint function how does super._mint know  which function to use and can
+//           we make it work without overriding?
+// ANSWER:
+
 /// @title A contract for an ERC 1363 Token with a linear bonding curve
 /// @author Patrick Zimmerer
 /// @notice This contract is to demo a simple ERC1363 token where you can buy and sell bond to a bonding curve
@@ -22,6 +26,9 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         i_sellingFeeInPercent = _sellingFeeInPercent;
     }
 
+    /**
+     * @notice needs to be overwritten
+     */
     function _mint(
         address account,
         uint256 amount
@@ -29,7 +36,10 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         super._mint(account, amount);
     }
 
-    function calculateTokenPrice(
+    /**
+     * @notice calculates the price _amount tokens would cost to buy
+     */
+    function calculateBuyingPrice(
         uint256 _amount
     ) public view returns (uint256) {
         uint256 startingPrice = totalSupply() *
@@ -38,33 +48,48 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         uint256 endingPrice = (totalSupply() + _amount) *
             INCREASE_PRICE_PER_TOKEN +
             BASE_PRICE;
-        uint256 totalPrice = ((startingPrice + endingPrice) / 2) * _amount;
-        return totalPrice;
+        uint256 buyingPrice = ((startingPrice + endingPrice) / 2) * _amount;
+        return buyingPrice;
     }
 
-    function calculateSellPrice(uint256 _amount) public view returns (uint256) {
+    /**
+     * @notice calculates the price _amount tokens would get you when you'd sell them
+     * @notice as information for the user to know how much eth they will get for _amount tokens
+     * @notice also a helper to reduce complexity in _callTokensReceived() / sell function
+     * @notice a selling fee which can be set when deploying the contract gets subtracted
+     */
+    function calculateSellingPrice(
+        uint256 _amount
+    ) public view returns (uint256) {
         uint256 startingPrice = totalSupply() *
             INCREASE_PRICE_PER_TOKEN +
             BASE_PRICE;
         uint256 endingPrice = (totalSupply() - _amount) *
             INCREASE_PRICE_PER_TOKEN +
             BASE_PRICE;
-        uint256 totalPrice = (((startingPrice + endingPrice) / 2) * _amount);
-        totalPrice = totalPrice - (totalPrice / 100) * i_sellingFeeInPercent;
-        return totalPrice;
+        uint256 sellingPrice = (((startingPrice + endingPrice) / 2) * _amount);
+        sellingPrice =
+            sellingPrice -
+            (sellingPrice / 100) *
+            i_sellingFeeInPercent;
+        return sellingPrice;
     }
 
+    /**
+     * @notice let's a user buy tokens when he sent the right amount of ETH
+     */
     function buyTokens(uint256 _amount) external payable {
-        // this looks nicer but it would be more gas efficient to check msg.value == calculateTokenPrice(_amount)
-        uint256 totalPrice = calculateTokenPrice(_amount);
+        // this looks nicer but it would be more gas efficient to check msg.value == calculateBuyingPrice(_amount)
+        uint256 buyingPrice = calculateBuyingPrice(_amount);
         require(
-            msg.value == totalPrice,
+            msg.value == buyingPrice,
             "The sent ETH is not the right amount"
         );
         _mint(msg.sender, _amount);
     }
 
     /**
+     * ------------- SELL FUNCTION -----------------
      * @notice Handle the receipt of ERC1363 tokens.
      * @dev Any ERC1363 smart contract calls this function on the recipient
      * Note: the token contract address is always the message sender.
@@ -81,7 +106,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         bytes calldata data
     ) external returns (bytes4) {
         _burn(address(this), amount);
-        payable(sender).transfer(calculateSellPrice(amount));
+        payable(sender).transfer(calculateSellingPrice(amount));
         return
             bytes4(
                 keccak256("onTransferReceived(address,address,uint256,bytes)")
