@@ -55,6 +55,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     function buyTokens(uint256 _amount) external payable {
+        // this looks nicer but it would be more gas efficient to check msg.value == calculateTokenPrice(_amount)
         uint256 totalPrice = calculateTokenPrice(_amount);
         require(
             msg.value == totalPrice,
