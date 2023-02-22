@@ -4,8 +4,29 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 
+// QUESTION: Simple explanation why we need ERC-1820 / 165 => just to check if some function is implemented in a specific contract?
+// ANSWER:
+
+// QUESTION: Do I need to inherit from IERC1363Receiver or could I just implement it as below?
+
 // QUESTION: I need to override the _mint function how does super._mint know  which function to use and can
 //           we make it work without overriding?
+// ANSWER:
+
+// QUESTION: Is there a way to avoid overriding every single function if you inherrit from 2 contracts which inherit
+//           from the same contract as ERC77 & ERC20Capped => inherit both from ERC20,
+//           also is there a way to avoid filling both the ERC777 and ERC20 constructor with the same variables?
+// ANSWER:
+
+// QUESTION: Do we need to learn all those ERC Standards or is there just a few major ones which we should be aware of
+//           and if so, which should we learn?
+// ANSWER:
+
+// QUESTION: Hardhat vs Foundry, just a quick pros / cons, should I try to learn both when I'm done with a week before it's over?
+//           In general what should I do when finishing a week early?
+// ANSWER:
+
+// QUESTION: In general when should I inherit from another contract an when should I use an interface instead?
 // ANSWER:
 
 /// @title A contract for an ERC 1363 Token with a linear bonding curve
