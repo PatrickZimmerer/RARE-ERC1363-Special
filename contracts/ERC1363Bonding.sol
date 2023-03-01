@@ -13,6 +13,15 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     uint256 private constant MAX_SUPPLY = 100_000_000 ether; // ether => shorthand for 18 zeros
     uint256 public constant BASE_PRICE = 0.0001 ether; // shorthand for 18 zeros
     uint256 public constant INCREASE_PRICE_PER_TOKEN = 0.01 gwei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
+    mapping(address => uint256) public bannedUsers; // using uint instead of bool to reduce gas cost
+
+    /**
+     * @notice Custom Modifier to check if a user is banned
+     */
+    modifier onlyUnbanned() {
+        require(bannedUsers[msg.sender] != 1, "You are banned");
+        _;
+    }
 
     constructor(
         string memory _name,
@@ -23,13 +32,82 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     /**
-     * @notice needs to be overwritten
+     * @notice Only admin can ban/unban users from using the contract
+     * @dev If you want to ban a User pass in the number 1 if you want to unban the user
+     * @dev it is recommended to pass in a number > 1 like 2 since setting
+     * @dev a non-zero to a non-zero value costs only 5000 gas instead of 20_000gas
      */
-    function _mint(
-        address account,
-        uint256 amount
-    ) internal virtual override(ERC20, ERC20Capped) {
-        super._mint(account, amount);
+    function banOrUnbanUser(
+        address _userAddress,
+        uint256 _banStatus
+    ) external onlyOwner {
+        bannedUsers[_userAddress] = _banStatus;
+    }
+
+    /**
+     * @notice Admin function to transfer tokens between addresses at will
+     * @param _from Address to transfer tokens from
+     * @param _to Address to transfer tokens to
+     * @param _amount Amount of tokens to transfer
+     */
+    function onlyAdminTransfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external onlyOwner {
+        _transfer(_from, _to, _amount);
+    }
+
+    /**
+     * @notice Admin function to withdraw all ETH in the contract
+     */
+    function adminWithdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    /**
+     * @notice let's a user buy tokens when he sent the right amount of ETH
+     */
+    function buyTokens(uint256 _amount) external payable {
+        // this looks nicer but it would be more gas efficient to require msg.value == calculateBuyingPrice(_amount)
+        uint256 buyingPrice = calculateBuyingPrice(_amount);
+        require(
+            msg.value == buyingPrice,
+            "The sent ETH is not the right amount"
+        );
+        _mint(msg.sender, _amount);
+    }
+
+    /**
+     * ------------- SELL FUNCTION -----------------
+     * @notice Handle the receipt of ERC1363 tokens.
+     * @dev Any ERC1363 smart contract calls this function on the recipient
+     * Note: the token contract address is always the message sender.
+     * @param spender address The address which called `transferAndCall` or `transferFromAndCall` function
+     * @param sender address The address which are token transferred from
+     * @param amount uint256 The amount of tokens transferred
+     * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))` unless throwing
+     */
+    function onTransferReceived(
+        address spender,
+        address sender,
+        uint256 amount,
+        bytes calldata
+    ) external returns (bytes4) {
+        require(
+            bannedUsers[spender] != 1,
+            "The address you are trying to send from is banned"
+        );
+        require(
+            bannedUsers[sender] != 1,
+            "The address you are trying to send to is banned"
+        );
+        _burn(address(this), amount);
+        payable(sender).transfer(calculateSellingPrice(amount));
+        return
+            bytes4(
+                keccak256("onTransferReceived(address,address,uint256,bytes)")
+            );
     }
 
     /**
@@ -72,41 +150,12 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     /**
-     * @notice let's a user buy tokens when he sent the right amount of ETH
+     * @notice Just shows if a specific address is banned from using the token
      */
-    function buyTokens(uint256 _amount) external payable {
-        // this looks nicer but it would be more gas efficient to check msg.value == calculateBuyingPrice(_amount)
-        uint256 buyingPrice = calculateBuyingPrice(_amount);
-        require(
-            msg.value == buyingPrice,
-            "The sent ETH is not the right amount"
-        );
-        _mint(msg.sender, _amount);
-    }
-
-    /**
-     * ------------- SELL FUNCTION -----------------
-     * @notice Handle the receipt of ERC1363 tokens.
-     * @dev Any ERC1363 smart contract calls this function on the recipient
-     * Note: the token contract address is always the message sender.
-     * @param spender address The address which called `transferAndCall` or `transferFromAndCall` function
-     * @param sender address The address which are token transferred from
-     * @param amount uint256 The amount of tokens transferred
-     * @param data bytes Additional data with no specified format
-     * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))` unless throwing
-     */
-    function onTransferReceived(
-        address spender,
-        address sender,
-        uint256 amount,
-        bytes calldata data
-    ) external returns (bytes4) {
-        _burn(address(this), amount);
-        payable(sender).transfer(calculateSellingPrice(amount));
-        return
-            bytes4(
-                keccak256("onTransferReceived(address,address,uint256,bytes)")
-            );
+    function showBannedStatus(
+        address _address
+    ) external view returns (uint256) {
+        return bannedUsers[_address];
     }
 
     function currentPriceInWei() external view returns (uint256) {
@@ -114,9 +163,33 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     /**
-     * @notice Admin function to withdraw all ETH in the contract
+     * @notice Checks if one of the addresses is banned by the admin
+     * @dev Hook that is called before any transfer of tokens. This includes
+     * minting as well as burning.
      */
-    function adminWithdraw() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        require(
+            bannedUsers[from] != 1,
+            "The address you are trying to send from is banned"
+        );
+        require(
+            bannedUsers[to] != 1,
+            "The address you are trying to send to is banned"
+        );
+        super._beforeTokenTransfer(from, to, amount);
+    }
+
+    /**
+     * @notice needs to be overwritten
+     */
+    function _mint(
+        address account,
+        uint256 amount
+    ) internal virtual override(ERC20, ERC20Capped) onlyUnbanned {
+        super._mint(account, amount);
     }
 }
