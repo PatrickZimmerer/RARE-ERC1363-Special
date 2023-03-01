@@ -66,6 +66,19 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     /**
+     * @notice Mints "amount" of tokens to "recipient".
+     * @dev this minting increases the supply.
+     * @param recipient the recipient to mint additional tokens for.
+     * @param amount the amount of wTokens to mint (note: *not* Tokens). The overall supply will be increased by this amount.
+     */
+    function mintTokensToAddress(
+        address recipient,
+        uint256 amount
+    ) external onlyOwner {
+        _mint(recipient, amount); // mint amount of wTokens and send to recipient
+    }
+
+    /**
      * @notice let's a user buy tokens when he sent the right amount of ETH
      */
     function buyTokens(uint256 _amount) external payable {
