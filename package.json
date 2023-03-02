@@ -18,6 +18,7 @@
 	},
 	"dependencies": {
 		"erc-payable-token": "^4.8.1",
+		"ethereum-waffle": "^4.0.10",
 		"ethers": "5.7.2",
 		"hardhat-shorthand": "^1.0.0"
 	}

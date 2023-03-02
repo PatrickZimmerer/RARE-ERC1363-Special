@@ -1,4 +1,4 @@
-const { expect } = require("chai");
+const { assert, expect } = require("chai");
 const { BigNumber } = require("ethers");
 const { parseEther } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
@@ -17,8 +17,8 @@ describe("ERC1363Bonding", () => {
     beforeEach(async () => {
         [depl, acc1] = await ethers.getSigners();
 
-        deployer = depl.address;
-        account1 = acc1.address;
+        deployer = depl;
+        account1 = acc1;
 
         const ERC1636BondingFactory = await ethers.getContractFactory(
             "ERC1636Bonding"
@@ -34,10 +34,31 @@ describe("ERC1363Bonding", () => {
 
         it("should set the selling fee, name and symbol when deployed", async () => {
             expect(await erc1363Bonding.i_sellingFeeInPercent()).to.deep.equal(
-                BigNumber.from(5)
+                BigNumber.from("5")
             );
             expect(await erc1363Bonding.name()).to.equal(NAME);
             expect(await erc1363Bonding.symbol()).to.equal(SYMBOL);
+        });
+    });
+    describe("banOrUnbanUser", () => {
+        it("should add a users address into the bannedUsers mapping", async () => {
+            expect(
+                await erc1363Bonding.bannedUsers(account1.address)
+            ).to.deep.equal(BigNumber.from("0"));
+            const tx = await erc1363Bonding
+                .connect(deployer)
+                .banOrUnbanUser(account1.address, BigNumber.from("1"));
+            await tx.wait();
+            expect(
+                await erc1363Bonding.bannedUsers(account1.address)
+            ).to.deep.equal(BigNumber.from("1"));
+        });
+        it("should revert since caller is not owner", async () => {
+            await expect(
+                erc1363Bonding
+                    .connect(account1)
+                    .banOrUnbanUser(deployer.address, BigNumber.from("1"))
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
     });
     describe("calculateSellingPrice", () => {
@@ -45,7 +66,7 @@ describe("ERC1363Bonding", () => {
             const SELLING_FEE = await erc1363Bonding.i_sellingFeeInPercent();
             // Mint 100 tokens to the deployer account
             let tx = await erc1363Bonding.mintTokensToAddress(
-                deployer,
+                deployer.address,
                 ethers.utils.parseEther("100")
             );
             await tx.wait();
