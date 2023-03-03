@@ -81,7 +81,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     /**
      * @notice let's a user buy tokens when he sent the right amount of ETH
      */
-    function buyTokens(uint256 _amount) external payable {
+    function buyTokens(uint256 _amount) external payable onlyUnbanned {
         // this looks nicer but it would be more gas efficient to require msg.value == calculateBuyingPrice(_amount)
         uint256 buyingPrice = calculateBuyingPrice(_amount);
         require(
