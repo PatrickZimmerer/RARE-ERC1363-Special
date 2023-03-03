@@ -37,12 +37,12 @@ describe("ERC1363Bonding", () => {
             .mul(INCREASE_PRICE_PER_TOKEN)
             .add(BASE_PRICE);
         const endingPrice = totalSupply
-            .add(ethers.utils.parseEther(`${amount}`))
+            .add(BigNumber.from(amount))
             .mul(INCREASE_PRICE_PER_TOKEN)
             .add(BASE_PRICE);
         const expectedBuyingPrice = startingPrice
             .add(endingPrice)
-            .mul(ethers.utils.parseEther(`${amount}`))
+            .mul(BigNumber.from(amount))
             .div(BigNumber.from("2"));
         // console.log({ startingPrice, endingPrice, expectedBuyingPrice });
         return expectedBuyingPrice;
@@ -174,7 +174,7 @@ describe("ERC1363Bonding", () => {
             console.log("TOTAL SUPPLY END  :", totalSupply);
 
             const buyingPriceEnd = await erc1363Bonding.calculateBuyingPrice(
-                ethers.utils.parseEther("10")
+                BigNumber.from("10")
             );
             const expectedBuyingPriceEnd = calculatedBuyingPrice(
                 totalSupply,
