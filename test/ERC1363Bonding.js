@@ -47,7 +47,6 @@ describe("ERC1363Bonding", () => {
             .add(endingPrice)
             .div(BigNumber.from("2"))
             .mul(BigNumber.from(amount));
-        console.log({ startingPrice, endingPrice, expectedBuyingPrice });
         return expectedBuyingPrice;
     }
 
@@ -136,7 +135,7 @@ describe("ERC1363Bonding", () => {
     });
     describe("onlyAdminTransfer", () => {
         it("should allow the owner to move tokens between addresses at will", async () => {
-            let mintTx = await erc1363Bonding.mintTokensToAddress(
+            const mintTx = await erc1363Bonding.mintTokensToAddress(
                 account1.address,
                 BigNumber.from("100")
             );
@@ -147,7 +146,7 @@ describe("ERC1363Bonding", () => {
             expect(await erc1363Bonding.balanceOf(account1.address)).eq(
                 BigNumber.from("100")
             );
-            let transferTx = await erc1363Bonding.onlyAdminTransfer(
+            const transferTx = await erc1363Bonding.onlyAdminTransfer(
                 account1.address,
                 deployer.address,
                 BigNumber.from("100")
@@ -244,38 +243,28 @@ describe("ERC1363Bonding", () => {
                     )
             ).to.be.revertedWith("Ownable: caller is not the owner");
         });
-    });
-    describe("buyTokens", () => {
-        it("should add a users address into the bannedUsers mapping and ban him from buyingTokens", async () => {
-            const totalSupply = await erc1363Bonding.totalSupply();
-            expect(await erc1363Bonding.bannedUsers(account1.address)).eq(
-                BigNumber.from("0")
-            );
+        it("should revert the mintTokensToAddress since receiver is banned", async () => {
             const banTx = await erc1363Bonding.banOrUnbanUser(
                 account1.address,
                 BigNumber.from("1")
             );
             await banTx.wait();
-            expect(await erc1363Bonding.bannedUsers(account1.address)).eq(
-                BigNumber.from("1")
-            );
             await expect(
-                erc1363Bonding
-                    .connect(account1)
-                    .buyTokens(BigNumber.from("10000"), {
-                        value: calculatedBuyingPrice(
-                            totalSupply,
-                            BigNumber.from("10000")
-                        ),
-                    })
-            ).to.be.revertedWith("You are banned");
-
-            const unbanTx = await erc1363Bonding.banOrUnbanUser(
-                account1.address,
-                BigNumber.from("2")
+                erc1363Bonding.mintTokensToAddress(
+                    account1.address,
+                    BigNumber.from("100")
+                )
+            ).to.be.revertedWith(
+                "The address you are trying to send to is banned"
             );
-            await unbanTx.wait();
-
+        });
+    });
+    describe("buyTokens", () => {
+        it("should allow a user to buy tokens", async () => {
+            const totalSupply = await erc1363Bonding.totalSupply();
+            expect(await erc1363Bonding.balanceOf(account1.address)).eq(
+                BigNumber.from("0")
+            );
             const buyTx = await erc1363Bonding
                 .connect(account1)
                 .buyTokens(BigNumber.from("10000"), {
@@ -290,18 +279,131 @@ describe("ERC1363Bonding", () => {
             );
             expect(userBalance).eq(BigNumber.from("10000"));
         });
-        it("should revert since caller is not owner", async () => {
+        it("should revert since the value sent is not the right amount", async () => {
+            const totalSupply = await erc1363Bonding.totalSupply();
+            let userBalance = await erc1363Bonding.balanceOf(account1.address);
+            expect(await erc1363Bonding.balanceOf(account1.address)).eq(
+                BigNumber.from("0")
+            );
             await expect(
                 erc1363Bonding
                     .connect(account1)
-                    .banOrUnbanUser(deployer.address, BigNumber.from("1"))
-            ).to.be.revertedWith("Ownable: caller is not the owner");
+                    .buyTokens(BigNumber.from("10000"), {
+                        value: calculatedBuyingPrice(
+                            totalSupply,
+                            BigNumber.from("9999")
+                        ),
+                    })
+            ).to.be.revertedWith("The sent ETH is not the right amount");
+            userBalance = await erc1363Bonding.balanceOf(account1.address);
+            expect(userBalance).eq(BigNumber.from("0"));
+        });
+        it("should revert since the address from is banned", async () => {
+            let mintTx = await erc1363Bonding.mintTokensToAddress(
+                account1.address,
+                BigNumber.from("100")
+            );
+            await mintTx.wait();
+            const banTx = await erc1363Bonding.banOrUnbanUser(
+                account1.address,
+                BigNumber.from("1")
+            );
+            await banTx.wait();
+            await expect(
+                erc1363Bonding
+                    .connect(account1)
+                    .transfer(deployer.address, BigNumber.from("100"))
+            ).to.be.revertedWith(
+                "The address you are trying to send from is banned"
+            );
+        });
+    });
+    describe("onTransferReceived", () => {
+        it("should transfer ETH to the user according to the selling price and burn those tokens", async () => {
+            let totalSupply = await erc1363Bonding.totalSupply();
+            const buyTx = await erc1363Bonding
+                .connect(account1)
+                .buyTokens(BigNumber.from("10000"), {
+                    value: calculatedBuyingPrice(
+                        totalSupply,
+                        BigNumber.from("10000")
+                    ),
+                });
+            await buyTx.wait();
+            let tokenBalance = await erc1363Bonding.balanceOf(account1.address);
+            expect(tokenBalance).eq(BigNumber.from("10000"));
+            let contractBalance = await ethers.provider.getBalance(
+                erc1363Bonding.address
+            );
+
+            expect(contractBalance).eq(
+                calculatedBuyingPrice(totalSupply, BigNumber.from("10000"))
+            );
+            const startingBalance = await ethers.provider.getBalance(
+                account1.address
+            );
+            console.log({ startingBalance, contractBalance });
+            totalSupply = await erc1363Bonding.totalSupply();
+            const sellTx = await erc1363Bonding
+                .connect(account1)
+                .transferAndCall(
+                    erc1363Bonding.address,
+                    BigNumber.from("10000")
+                );
+            await sellTx.wait();
+        });
+    });
+    describe("showBannedStatus", () => {
+        it("should show the banned status of a user", async () => {
+            expect(await erc1363Bonding.showBannedStatus(account1.address)).eq(
+                BigNumber.from("0")
+            );
+            const banTx = await erc1363Bonding.banOrUnbanUser(
+                account1.address,
+                BigNumber.from("1")
+            );
+            await banTx.wait();
+            expect(await erc1363Bonding.showBannedStatus(account1.address)).eq(
+                BigNumber.from("1")
+            );
+            const unbanTx = await erc1363Bonding.banOrUnbanUser(
+                account1.address,
+                BigNumber.from("2")
+            );
+            await unbanTx.wait();
+            expect(await erc1363Bonding.showBannedStatus(account1.address)).eq(
+                BigNumber.from("2")
+            );
+        });
+    });
+    describe("currentPriceInWei", () => {
+        it("should show the current price of one token in wei", async () => {
+            let totalSupply = await erc1363Bonding.totalSupply();
+            let startPrice = await erc1363Bonding.currentPriceInWei();
+            expect(startPrice).eq(
+                BigNumber.from(
+                    BASE_PRICE.add(INCREASE_PRICE_PER_TOKEN.mul(totalSupply))
+                )
+            );
+            const startTx = await erc1363Bonding.mintTokensToAddress(
+                deployer.address,
+                ethers.utils.parseEther("10")
+            );
+            await startTx.wait();
+            totalSupply = await erc1363Bonding.totalSupply();
+            let endPrice = await erc1363Bonding.currentPriceInWei();
+            expect(endPrice).eq(
+                BigNumber.from(
+                    BASE_PRICE.add(INCREASE_PRICE_PER_TOKEN.mul(totalSupply))
+                )
+            );
+            expect(endPrice).gt(startPrice);
         });
     });
     describe("calculateSellingPrice", () => {
         it("should calculate the selling price and adjust the price according to the bonding curve", async () => {
             // Mint 100 tokens to the deployer account to test the increase of the selling price
-            let startTx = await erc1363Bonding.mintTokensToAddress(
+            const startTx = await erc1363Bonding.mintTokensToAddress(
                 deployer.address,
                 ethers.utils.parseEther("10")
             );
@@ -317,7 +419,7 @@ describe("ERC1363Bonding", () => {
                 BigNumber.from("10")
             );
             // Mint 100 tokens to the deployer account to test the increase of the selling price
-            let endTx = await erc1363Bonding.mintTokensToAddress(
+            const endTx = await erc1363Bonding.mintTokensToAddress(
                 deployer.address,
                 ethers.utils.parseEther("100")
             );
@@ -350,7 +452,7 @@ describe("ERC1363Bonding", () => {
                 BigNumber.from("10")
             );
             // Mint 100 tokens to the deployer account to increase the price
-            let tx = await erc1363Bonding.mintTokensToAddress(
+            const tx = await erc1363Bonding.mintTokensToAddress(
                 deployer.address,
                 ethers.utils.parseEther("100")
             );

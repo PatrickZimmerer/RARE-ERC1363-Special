@@ -96,25 +96,16 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
      * @notice Handle the receipt of ERC1363 tokens.
      * @dev Any ERC1363 smart contract calls this function on the recipient
      * Note: the token contract address is always the message sender.
-     * @param spender address The address which called `transferAndCall` or `transferFromAndCall` function
      * @param sender address The address which are token transferred from
      * @param amount uint256 The amount of tokens transferred
      * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))` unless throwing
      */
     function onTransferReceived(
-        address spender,
+        address,
         address sender,
         uint256 amount,
         bytes calldata
     ) external returns (bytes4) {
-        require(
-            bannedUsers[spender] != 1,
-            "The address you are trying to send from is banned"
-        );
-        require(
-            bannedUsers[sender] != 1,
-            "The address you are trying to send to is banned"
-        );
         _burn(address(this), amount);
         payable(sender).transfer(calculateSellingPrice(amount));
         return
@@ -202,7 +193,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     function _mint(
         address account,
         uint256 amount
-    ) internal virtual override(ERC20, ERC20Capped) onlyUnbanned {
+    ) internal virtual override(ERC20, ERC20Capped) {
         super._mint(account, amount);
     }
 }
