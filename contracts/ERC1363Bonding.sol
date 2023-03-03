@@ -12,7 +12,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
     uint256 public immutable i_sellingFeeInPercent;
     uint256 private constant MAX_SUPPLY = 100_000_000 ether; // ether => shorthand for 18 zeros
     uint256 public constant BASE_PRICE = 0.0001 ether; // shorthand for 18 zeros
-    uint256 public constant INCREASE_PRICE_PER_TOKEN = 0.01 gwei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
+    uint256 public constant INCREASE_PRICE_PER_TOKEN = 1 wei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
     mapping(address => uint256) public bannedUsers; // using uint instead of bool to reduce gas cost
 
     /**
