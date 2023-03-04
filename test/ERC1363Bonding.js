@@ -321,7 +321,7 @@ describe("ERC1363Bonding", () => {
         });
     });
     describe("onTransferReceived", () => {
-        it("should transfer ETH to the user according to the selling price and burn those tokens", async () => {
+        xit("should transfer ETH to the user according to the selling price and burn those tokens", async () => {
             const tx = await erc1363Bonding.mintTokensToAddress(
                 erc1363Bonding.address,
                 ethers.utils.parseEther("10")

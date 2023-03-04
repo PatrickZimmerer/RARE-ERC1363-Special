@@ -3,12 +3,15 @@ pragma solidity 0.8.18;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
+import "erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
+
+// ERRORS FOUND WITH SLITHER: Should inherit from IERC1363Receiver && onTransferReceived missed null check to the address
 
 /// @title A contract for an ERC 1363 Token with a linear bonding curve
 /// @author Patrick Zimmerer
 /// @notice This contract is to demo a simple ERC1363 token where you can buy and sell bond to a bonding curve
 /// @dev When deploying you can choose a token name, symbol and a sellingFee in percent which gets set in the constructor
-contract ERC1363Bonding is ERC1363, ERC20Capped, Ownable {
+contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
     uint256 public immutable SELLING_FEE_IN_PERCENT;
     uint256 private constant MAX_SUPPLY = 100_000_000 ether; // ether => shorthand for 18 zeros
     uint256 public constant BASE_PRICE = 0.0001 ether; // shorthand for 18 zeros
@@ -59,13 +62,6 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, Ownable {
     }
 
     /**
-     * @notice Admin function to withdraw all ETH in the contract
-     */
-    function adminWithdraw() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
-    }
-
-    /**
      * @notice Mints "amount" of tokens to "recipient".
      * @dev this minting increases the supply.
      * @param recipient the recipient to mint additional tokens for.
@@ -106,6 +102,7 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, Ownable {
         uint256 amount,
         bytes calldata
     ) external returns (bytes4) {
+        require(address(sender) != address(0));
         _burn(address(this), amount);
         payable(sender).transfer(calculateSellingPrice(amount));
         return
@@ -128,6 +125,13 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, Ownable {
             BASE_PRICE;
         uint256 buyingPrice = ((startingPrice + endingPrice) * _amount) / 2;
         return buyingPrice;
+    }
+
+    /**
+     * @notice Admin function to withdraw all ETH in the contract
+     */
+    function adminWithdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
     }
 
     /**
