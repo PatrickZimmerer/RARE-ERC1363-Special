@@ -1,4 +1,4 @@
-const { assert, expect } = require("chai");
+const { expect } = require("chai");
 const { BigNumber } = require("ethers");
 const { parseEther } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
