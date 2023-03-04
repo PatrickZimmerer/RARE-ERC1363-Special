@@ -8,8 +8,8 @@ import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 /// @author Patrick Zimmerer
 /// @notice This contract is to demo a simple ERC1363 token where you can buy and sell bond to a bonding curve
 /// @dev When deploying you can choose a token name, symbol and a sellingFee in percent which gets set in the constructor
-contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
-    uint256 public immutable i_sellingFeeInPercent;
+contract ERC1363Bonding is ERC1363, ERC20Capped, Ownable {
+    uint256 public immutable SELLING_FEE_IN_PERCENT;
     uint256 private constant MAX_SUPPLY = 100_000_000 ether; // ether => shorthand for 18 zeros
     uint256 public constant BASE_PRICE = 0.0001 ether; // shorthand for 18 zeros
     uint256 public constant INCREASE_PRICE_PER_TOKEN = 2 wei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
@@ -28,7 +28,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         string memory _symbol,
         uint256 _sellingFeeInPercent
     ) ERC20(_name, _symbol) ERC20Capped(MAX_SUPPLY) {
-        i_sellingFeeInPercent = _sellingFeeInPercent;
+        SELLING_FEE_IN_PERCENT = _sellingFeeInPercent;
     }
 
     /**
@@ -148,7 +148,7 @@ contract ERC1636Bonding is ERC1363, ERC20Capped, Ownable {
         uint256 sellingPrice = (((startingPrice + endingPrice) * _amount) / 2);
         sellingPrice =
             sellingPrice -
-            (sellingPrice * i_sellingFeeInPercent) /
+            (sellingPrice * SELLING_FEE_IN_PERCENT) /
             100;
         return sellingPrice;
     }

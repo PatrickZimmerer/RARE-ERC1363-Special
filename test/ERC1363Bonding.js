@@ -55,10 +55,10 @@ describe("ERC1363Bonding", () => {
         deployer = depl;
         account1 = acc1;
 
-        const ERC1636BondingFactory = await ethers.getContractFactory(
-            "ERC1636Bonding"
+        const ERC1363BondingFactory = await ethers.getContractFactory(
+            "ERC1363Bonding"
         );
-        erc1363Bonding = await ERC1636BondingFactory.deploy(
+        erc1363Bonding = await ERC1363BondingFactory.deploy(
             NAME,
             SYMBOL,
             SELLING_FEE
@@ -72,7 +72,7 @@ describe("ERC1363Bonding", () => {
         });
 
         it("should set the selling fee, name and symbol when deployed", async () => {
-            expect(await erc1363Bonding.i_sellingFeeInPercent()).eq(
+            expect(await erc1363Bonding.SELLING_FEE_IN_PERCENT()).eq(
                 BigNumber.from("5")
             );
             expect(await erc1363Bonding.name()).to.equal(NAME);
