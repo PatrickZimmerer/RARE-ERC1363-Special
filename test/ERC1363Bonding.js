@@ -320,37 +320,45 @@ describe("ERC1363Bonding", () => {
     });
     describe("onTransferReceived", () => {
         it("should transfer ETH to the user according to the selling price and burn those tokens", async () => {
+            const tx = await erc1363Bonding.mintTokensToAddress(
+                erc1363Bonding.address,
+                ethers.utils.parseEther("10")
+            );
+            await tx.wait();
             let totalSupply = await erc1363Bonding.totalSupply();
+            console.log(totalSupply);
             const buyTx = await erc1363Bonding
                 .connect(account1)
-                .buyTokens(BigNumber.from("10000"), {
+                .buyTokens(BigNumber.from("10"), {
                     value: calculatedBuyingPrice(
                         totalSupply,
-                        BigNumber.from("10000")
+                        BigNumber.from("10")
                     ),
                 });
             await buyTx.wait();
             let tokenBalance = await erc1363Bonding.balanceOf(account1.address);
-            expect(tokenBalance).eq(BigNumber.from("10000"));
+            expect(tokenBalance).eq(BigNumber.from("10"));
+
             let contractBalance = await ethers.provider.getBalance(
                 erc1363Bonding.address
             );
-
             expect(contractBalance).eq(
-                calculatedBuyingPrice(totalSupply, BigNumber.from("10000"))
+                calculatedBuyingPrice(totalSupply, BigNumber.from("10"))
             );
             const startingBalance = await ethers.provider.getBalance(
                 account1.address
             );
-            console.log({ startingBalance, contractBalance });
             totalSupply = await erc1363Bonding.totalSupply();
-            const sellTx = await erc1363Bonding
-                .connect(account1)
-                .transferAndCall(
-                    erc1363Bonding.address,
-                    BigNumber.from("10000")
-                );
+            // HERE IT FAILS: VM Exception while processing transaction: reverted with reason string 'ERC20: transfer amount exceeds balance'
+            const sellTx = await erc1363Bonding[
+                "transferAndCall(address,uint256)"
+            ](erc1363Bonding.address, BigNumber.from("10"));
             await sellTx.wait();
+            const endingBalance = await ethers.provider.getBalance(
+                account1.address
+            );
+            expect(startingBalance).lt(endingBalance);
+            console.log({ startingBalance, contractBalance });
         });
     });
     describe("showBannedStatus", () => {
