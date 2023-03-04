@@ -2,7 +2,6 @@ const { assert, expect } = require("chai");
 const { BigNumber } = require("ethers");
 const { parseEther } = require("ethers/lib/utils");
 const { ethers } = require("hardhat");
-const { mine } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("ERC1363Bonding", () => {
     let erc1363Bonding;
