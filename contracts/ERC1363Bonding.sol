@@ -5,7 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
 import "erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
 
-// ERRORS FOUND WITH SLITHER: Should inherit from IERC1363Receiver && onTransferReceived missed null check to the address
+// ERRORS FOUND WITH SLITHER:
+// - Should inherit from IERC1363Receiver
+// - onTransferReceived missed null check to the address
 
 /// @title A contract for an ERC 1363 Token with a linear bonding curve
 /// @author Patrick Zimmerer
@@ -112,6 +114,26 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
     }
 
     /**
+     * @notice Admin function to withdraw all ETH in the contract
+     */
+    function adminWithdraw() external onlyOwner {
+        payable(msg.sender).transfer(address(this).balance);
+    }
+
+    /**
+     * @notice Just shows if a specific address is banned from using the token
+     */
+    function showBannedStatus(
+        address _address
+    ) external view returns (uint256) {
+        return bannedUsers[_address];
+    }
+
+    function currentPriceInWei() external view returns (uint256) {
+        return BASE_PRICE + (INCREASE_PRICE_PER_TOKEN * totalSupply());
+    }
+
+    /**
      * @notice calculates the price _amount tokens would cost to buy
      */
     function calculateBuyingPrice(
@@ -125,13 +147,6 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
             BASE_PRICE;
         uint256 buyingPrice = ((startingPrice + endingPrice) * _amount) / 2;
         return buyingPrice;
-    }
-
-    /**
-     * @notice Admin function to withdraw all ETH in the contract
-     */
-    function adminWithdraw() external onlyOwner {
-        payable(msg.sender).transfer(address(this).balance);
     }
 
     /**
@@ -155,19 +170,6 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
             (sellingPrice * SELLING_FEE_IN_PERCENT) /
             100;
         return sellingPrice;
-    }
-
-    /**
-     * @notice Just shows if a specific address is banned from using the token
-     */
-    function showBannedStatus(
-        address _address
-    ) external view returns (uint256) {
-        return bannedUsers[_address];
-    }
-
-    function currentPriceInWei() external view returns (uint256) {
-        return BASE_PRICE + (INCREASE_PRICE_PER_TOKEN * totalSupply());
     }
 
     /**
