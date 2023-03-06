@@ -16,8 +16,8 @@ import "erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
 contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
     uint256 public immutable SELLING_FEE_IN_PERCENT;
     uint256 private constant MAX_SUPPLY = 100_000_000 ether; // ether => shorthand for 18 zeros
-    uint256 public constant BASE_PRICE = 0.0001 ether; // shorthand for 18 zeros
-    uint256 public constant INCREASE_PRICE_PER_TOKEN = 2 wei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
+    uint256 public constant BASE_PRICE = 0.001 ether; // shorthand for 18 zeros
+    uint256 public constant INCREASE_PRICE_PER_TOKEN = 1 gwei; // shorthand for 9 zeros => 10000000 wei or 0.00000000001 ether
     mapping(address => uint256) public bannedUsers; // using uint instead of bool to reduce gas cost
 
     /**
@@ -90,12 +90,16 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
     }
 
     /**
-     * ------------- SELL FUNCTION -----------------
-     * @notice Handle the receipt of ERC1363 tokens.
+     * @notice Handle the receipt of ERC1363 tokens
      * @dev Any ERC1363 smart contract calls this function on the recipient
+     * after a `transfer` or a `transferFrom`. This function MAY throw to revert and reject the
+     * transfer. Return of other than the magic value MUST result in the
+     * transaction being reverted.
      * Note: the token contract address is always the message sender.
+     * @param , address The address which called `transferAndCall` or `transferFromAndCall` function
      * @param sender address The address which are token transferred from
      * @param amount uint256 The amount of tokens transferred
+     * @param , bytes Additional data with no specified format
      * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))` unless throwing
      */
     function onTransferReceived(
@@ -104,9 +108,9 @@ contract ERC1363Bonding is ERC1363, ERC20Capped, IERC1363Receiver, Ownable {
         uint256 amount,
         bytes calldata
     ) external returns (bytes4) {
-        require(address(sender) != address(0));
+        uint256 sellingPrice = calculateSellingPrice(amount);
         _burn(address(this), amount);
-        payable(sender).transfer(calculateSellingPrice(amount));
+        payable(sender).transfer(sellingPrice);
         return
             bytes4(
                 keccak256("onTransferReceived(address,address,uint256,bytes)")
