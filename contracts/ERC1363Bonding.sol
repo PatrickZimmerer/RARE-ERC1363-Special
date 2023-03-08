@@ -9,6 +9,10 @@ import "erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
 // - Should inherit from IERC1363Receiver
 // - onTransferReceived missed null check to the address
 
+// ERRORS FOUND WITH MythX QUICK Scan: NONE
+
+// ERRORS FOUND WITH MythX DEEP Scan: NONE
+
 /// @title A contract for an ERC 1363 Token with a linear bonding curve
 /// @author Patrick Zimmerer
 /// @notice This contract is to demo a simple ERC1363 token where you can buy and sell bond to a bonding curve
