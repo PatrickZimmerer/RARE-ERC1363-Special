@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.18;
+pragma solidity 0.8.17;
 import "./ERC1363Bonding.sol";
 
 /// @title A contract for an ERC 1363 Token with a linear bonding curve

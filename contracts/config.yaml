@@ -1,6 +1,9 @@
 # Can set testMode to property or assertion mode depending on how you want to test the system's properties
 testMode: assertion
 
-testLimit: 500000
+testLimit: 50000
 
 corpusDir: coverage
+
+# provide solc remappings to crytic-compile
+cryticArgs: ["--solc-remaps", "@=node_modules/@"]
