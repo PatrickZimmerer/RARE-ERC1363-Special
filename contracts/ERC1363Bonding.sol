@@ -2,8 +2,8 @@
 pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
-import "../node_modules/erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
-import "../node_modules/erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
+import "erc-payable-token/contracts/token/ERC1363/ERC1363.sol";
+import "erc-payable-token/contracts/token/ERC1363/IERC1363Receiver.sol";
 
 // ERRORS FOUND WITH SLITHER:
 // - Should inherit from IERC1363Receiver
