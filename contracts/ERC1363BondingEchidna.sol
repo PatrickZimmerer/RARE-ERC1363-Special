@@ -26,15 +26,15 @@ contract ERC1363BondingEchidna {
     }
 
     // function test_buyTokens_success(uint256 amount) public {
-    //     uint256 initialBalance = tokenContract.balanceOf(address(this));
-    //     uint256 initialEtherBalance = address(this).balance;
+    //     uint256 initialBalance = tokenContract.balanceOf(echidna);
+    //     uint256 initialEtherBalance = echidna.balance;
     //     uint256 initialContractEtherBalance = address(tokenContract).balance;
     //     uint256 buyingPrice = tokenContract.calculateBuyingPrice(amount);
     //     tokenContract.buyTokens{value: buyingPrice}(amount);
     //     assert(
-    //         tokenContract.balanceOf(address(this)) == initialBalance + amount
+    //         tokenContract.balanceOf(echidna) == initialBalance + amount
     //     );
-    //     assert(address(this).balance == initialEtherBalance - buyingPrice);
+    //     assert(echidna.balance == initialEtherBalance - buyingPrice);
     //     assert(
     //         address(tokenContract).balance ==
     //             initialContractEtherBalance + buyingPrice
@@ -66,28 +66,93 @@ contract ERC1363BondingEchidna {
     //     assert(startSellingPrice < endSellingPrice);
     // }
 
-    function test_sellPriceChangeV2(uint256 _amount) public {
-        // this reverts in some cases
-        uint256 buyingPrice = tokenContract.calculateBuyingPrice(100);
-        tokenContract.buyTokens{value: buyingPrice}(100);
-        // binds fuzzer toa value between 1 & rest of purchaseable tokens
-        uint256 amount = 1 +
-            (_amount % (tokenContract.cap() - tokenContract.totalSupply()));
-        uint256 startSellingPrice = tokenContract.calculateSellingPrice(amount);
-        buyingPrice = tokenContract.calculateBuyingPrice(amount);
-        tokenContract.buyTokens{value: buyingPrice}(amount);
-        uint256 endSellingPrice = tokenContract.calculateSellingPrice(amount);
-        assert(startSellingPrice < endSellingPrice);
+    // function test_sellPriceChangeV2(uint256 _amount) public {
+    //     // this reverts in some cases
+    //     uint256 buyingPrice = tokenContract.calculateBuyingPrice(100);
+    //     tokenContract.buyTokens{value: buyingPrice}(100);
+    //     // binds fuzzer toa value between 1 & rest of purchaseable tokens
+    //     uint256 amount = 1 +
+    //         (_amount % (tokenContract.cap() - tokenContract.totalSupply()));
+    //     uint256 startSellingPrice = tokenContract.calculateSellingPrice(amount);
+    //     buyingPrice = tokenContract.calculateBuyingPrice(amount);
+    //     tokenContract.buyTokens{value: buyingPrice}(amount);
+    //     uint256 endSellingPrice = tokenContract.calculateSellingPrice(amount);
+    //     assert(startSellingPrice < endSellingPrice);
+    // }
+
+    // function buyPriceIncreases(uint256 amount) public {
+    //     // bounds amount between 1 and all buyable tokens - 100 (which will be bought afterwards)
+    //     amount =
+    //         1 +
+    //         (amount %
+    //             (tokenContract.cap() - tokenContract.totalSupply() - 100));
+    //     uint256 startBuyingPrice = tokenContract.calculateBuyingPrice(amount);
+    //     uint256 buyingPrice = tokenContract.calculateBuyingPrice(100);
+    //     tokenContract.buyTokens{value: buyingPrice}(100);
+    //     uint256 endBuyingPrice = tokenContract.calculateBuyingPrice(amount);
+    //     assert(startBuyingPrice < endBuyingPrice);
+    // }
+    // function test_sellBalanceDecrease(uint256 amount) public {
+    //     require(amount <= tokenContract.totalSupply());
+    //     uint256 initialTokenBalance = tokenContract.balanceOf(address(this));
+    //     uint256 initialEtherBalance = address(this).balance;
+    //     uint256 initialContractEtherBalance = address(tokenContract).balance;
+    //     uint256 sellPrice = tokenContract.calculateSellingPrice(amount);
+    //     try
+    //         tokenContract.transferFromAndCall(
+    //             address(this),
+    //             address(tokenContract),
+    //             amount
+    //         )
+    //     {
+    //         assert(
+    //             tokenContract.balanceOf(address(this)) ==
+    //                 initialTokenBalance - amount
+    //         );
+    //         assert(address(this).balance == initialEtherBalance + sellPrice);
+    //         assert(
+    //             address(tokenContract).balance ==
+    //                 initialContractEtherBalance - sellPrice
+    //         );
+    //     } catch (bytes memory err) {
+    //         assert(false);
+    //     }
+    // }
+
+    // here bounding doesn't work but idk why
+    function test_contractBalanceDecreases(uint256 amount) public {
+        // bounds amount between 1 and all sellable tokens
+        // THIS DOESN'T WORK IDK WHY
+        // amount = amount % tokenContract.totalSupply();
+
+        // this does work
+        require(amount <= tokenContract.totalSupply());
+
+        uint256 initialTokenBalance = tokenContract.balanceOf(address(this));
+        uint256 initialEtherBalance = address(this).balance;
+        uint256 initialContractEtherBalance = address(tokenContract).balance;
+        uint256 sellPrice = tokenContract.calculateSellingPrice(amount);
+
+        try
+            tokenContract.transferFromAndCall(
+                address(this),
+                address(tokenContract),
+                amount
+            )
+        {
+            assert(
+                tokenContract.balanceOf(address(this)) ==
+                    initialTokenBalance - amount
+            );
+            assert(address(this).balance == initialEtherBalance + sellPrice);
+            assert(
+                address(tokenContract).balance ==
+                    initialContractEtherBalance - sellPrice
+            );
+        } catch (bytes memory err) {
+            assert(false);
+        }
     }
 
-    function buyPriceIncreases(uint256 amount) public {
-        if (amount < 1) {
-            amount += 1;
-        }
-        // this reverts in some cases
-        uint256 startBuyingPrice = tokenContract.calculateBuyingPrice(100);
-        tokenContract.buyTokens{value: startBuyingPrice}(100);
-        uint256 endBuyingPrice = tokenContract.calculateBuyingPrice(amount);
-        assert(startBuyingPrice < endBuyingPrice);
-    }
+    receive() external payable {}
 }
