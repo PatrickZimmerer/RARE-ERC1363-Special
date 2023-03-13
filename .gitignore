@@ -10,3 +10,6 @@ cache
 artifacts
 deployments
 slither*
+echidna-coverage
+yarn-error.log
+combined_solc.json
